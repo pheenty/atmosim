@@ -128,7 +128,7 @@ struct gas_mixture {
     bool reaction_tick();
 
 private:
-    void adjust_amount_of(gas_ref gas, float by, float&);
+    void adjust_gas_cached_heat(gas_ref gas, float by, float&);
 
     // all supported reactions - if it's not here, it's not supported
     bool react_plasma_fire(float&);

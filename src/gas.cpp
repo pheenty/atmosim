@@ -176,7 +176,7 @@ bool gas_mixture::reaction_tick() {
     return reacted;
 }
 
-void gas_mixture::adjust_amount_of(gas_ref gas, float by, float& heat_capacity_cache) {
+void gas_mixture::adjust_gas_cached_heat(gas_ref gas, float by, float& heat_capacity_cache) {
     heat_capacity_cache += gas.specific_heat() * by;
     amounts[gas.idx] += by;
 }
@@ -198,15 +198,15 @@ bool gas_mixture::react_plasma_fire(float& heat_capacity_cache) {
             plasma_burn_rate = std::min(plasma_burn_rate, std::min(amount_of(plasma), amount_of(oxygen) / oxygen_burn_rate));
             float supersaturation = std::min(1.f, std::max((amount_of(oxygen) / amount_of(plasma) - super_saturation_ends) / (super_saturation_threshold - super_saturation_ends), 0.f));
 
-            adjust_amount_of(plasma, -plasma_burn_rate, heat_capacity_cache);
+            adjust_gas_cached_heat(plasma, -plasma_burn_rate, heat_capacity_cache);
 
-            adjust_amount_of(oxygen, -plasma_burn_rate * oxygen_burn_rate, heat_capacity_cache);
+            adjust_gas_cached_heat(oxygen, -plasma_burn_rate * oxygen_burn_rate, heat_capacity_cache);
 
             float trit_delta = plasma_burn_rate * supersaturation;
-            adjust_amount_of(tritium, trit_delta, heat_capacity_cache);
+            adjust_gas_cached_heat(tritium, trit_delta, heat_capacity_cache);
 
             float carbon_delta = plasma_burn_rate - trit_delta;
-            adjust_amount_of(carbon_dioxide, carbon_delta, heat_capacity_cache);
+            adjust_gas_cached_heat(carbon_dioxide, carbon_delta, heat_capacity_cache);
 
             energy_released += fire_plasma_energy_released * plasma_burn_rate;
         }
@@ -225,20 +225,20 @@ bool gas_mixture::react_tritium_fire_old(float& heat_capacity_cache) {
     if (amount_of(oxygen) < amount_of(tritium) || minimum_tritium_oxyburn_energy > temperature * heat_capacity_cache) {
         burned_fuel = std::min(amount_of(tritium), amount_of(oxygen) / tritium_burn_oxy_factor);
         float trit_delta = -burned_fuel;
-        adjust_amount_of(tritium, trit_delta, heat_capacity_cache);
+        adjust_gas_cached_heat(tritium, trit_delta, heat_capacity_cache);
     } else {
         burned_fuel = amount_of(tritium);
         float trit_delta = -amount_of(tritium) / tritium_burn_trit_factor;
 
-        adjust_amount_of(tritium, trit_delta, heat_capacity_cache);
-        adjust_amount_of(oxygen, -amount_of(tritium), heat_capacity_cache);
+        adjust_gas_cached_heat(tritium, trit_delta, heat_capacity_cache);
+        adjust_gas_cached_heat(oxygen, -amount_of(tritium), heat_capacity_cache);
 
         energy_released += fire_hydrogen_energy_released * burned_fuel * (tritium_burn_trit_factor - 1.f);
     }
     if (burned_fuel > 0.f) {
         energy_released += fire_hydrogen_energy_released * burned_fuel;
 
-        adjust_amount_of(water_vapour, burned_fuel, heat_capacity_cache);
+        adjust_gas_cached_heat(water_vapour, burned_fuel, heat_capacity_cache);
     }
     if (heat_capacity_cache > minimum_heat_capacity) {
         temperature = (temperature * old_heat_capacity + energy_released) / heat_capacity_cache;
@@ -255,20 +255,20 @@ bool gas_mixture::react_tritium_fire_new(float& heat_capacity_cache) {
 
     if (amount_of(oxygen) < amount_of(tritium) || minimum_tritium_oxyburn_energy > temperature * heat_capacity_cache) {
         burned_fuel = std::min(amount_of(tritium), amount_of(oxygen) / tritium_burn_oxy_factor);
-        adjust_amount_of(tritium, -burned_fuel, heat_capacity_cache);
-        adjust_amount_of(oxygen, -burned_fuel / tritium_burn_fuel_ratio);
+        adjust_gas_cached_heat(tritium, -burned_fuel, heat_capacity_cache);
+        adjust_gas_cached_heat(oxygen, -burned_fuel / tritium_burn_fuel_ratio, heat_capacity_cache);
     } else {
         // it was math.max in the original PR but it got fixed
         burned_fuel = std::min(amount_of(tritium), amount_of(oxygen) / tritium_burn_fuel_ratio / tritium_burn_trit_factor);
-        adjust_amount_of(tritium, -burned_fuel, heat_capacity_cache);
-        adjust_amount_of(oxygen, -burned_fuel / tritium_burn_fuel_ratio);
+        adjust_gas_cached_heat(tritium, -burned_fuel, heat_capacity_cache);
+        adjust_gas_cached_heat(oxygen, -burned_fuel / tritium_burn_fuel_ratio, heat_capacity_cache);
 
         energy_released += fire_hydrogen_energy_released * burned_fuel * (tritium_burn_trit_factor - 1.f);
     }
     if (burned_fuel > 0.f) {
         energy_released += fire_hydrogen_energy_released * burned_fuel;
 
-        adjust_amount_of(water_vapour, burned_fuel, heat_capacity_cache);
+        adjust_gas_cached_heat(water_vapour, burned_fuel, heat_capacity_cache);
     }
     if (heat_capacity_cache > minimum_heat_capacity) {
         temperature = (temperature * old_heat_capacity + energy_released) / heat_capacity_cache;
@@ -280,9 +280,9 @@ bool gas_mixture::react_tritium_fire_new(float& heat_capacity_cache) {
 bool gas_mixture::react_N2O_decomposition(float& heat_capacity_cache) {
     float n2o = amount_of(nitrous_oxide);
     float burned_fuel = n2o * N2Odecomposition_rate;
-    adjust_amount_of(nitrous_oxide, -burned_fuel, heat_capacity_cache);
-    adjust_amount_of(nitrogen, burned_fuel, heat_capacity_cache);
-    adjust_amount_of(oxygen, burned_fuel * 0.5f, heat_capacity_cache);
+    adjust_gas_cached_heat(nitrous_oxide, -burned_fuel, heat_capacity_cache);
+    adjust_gas_cached_heat(nitrogen, burned_fuel, heat_capacity_cache);
+    adjust_gas_cached_heat(oxygen, burned_fuel * 0.5f, heat_capacity_cache);
     // does not update temperature - this is accurate to the source
     return burned_fuel > 0.f;
 }
@@ -302,10 +302,10 @@ bool gas_mixture::react_frezon_production(float& heat_capacity_cache) {
     float trit_conversion = trit_burned / frezon_production_conversion_rate;
     float total = oxy_conversion + trit_conversion;
 
-    adjust_amount_of(oxygen, -oxy_conversion, heat_capacity_cache);
-    adjust_amount_of(tritium, -trit_conversion, heat_capacity_cache);
-    adjust_amount_of(frezon, total * efficiency, heat_capacity_cache);
-    adjust_amount_of(nitrogen, total * loss, heat_capacity_cache);
+    adjust_gas_cached_heat(oxygen, -oxy_conversion, heat_capacity_cache);
+    adjust_gas_cached_heat(tritium, -trit_conversion, heat_capacity_cache);
+    adjust_gas_cached_heat(frezon, total * efficiency, heat_capacity_cache);
+    adjust_gas_cached_heat(nitrogen, total * loss, heat_capacity_cache);
 
     return true;
 }
@@ -325,9 +325,9 @@ bool gas_mixture::react_frezon_coolant(float& heat_capacity_cache) {
         float nit_delta = -std::min(burn_rate * frezon_nitrogen_cool_ratio, amount_of(nitrogen));
         float frezon_delta = -std::min(burn_rate, amount_of(frezon));
 
-        adjust_amount_of(nitrogen, nit_delta, heat_capacity_cache);
-        adjust_amount_of(frezon, frezon_delta, heat_capacity_cache);
-        adjust_amount_of(nitrous_oxide, -nit_delta - frezon_delta, heat_capacity_cache);
+        adjust_gas_cached_heat(nitrogen, nit_delta, heat_capacity_cache);
+        adjust_gas_cached_heat(frezon, frezon_delta, heat_capacity_cache);
+        adjust_gas_cached_heat(nitrous_oxide, -nit_delta - frezon_delta, heat_capacity_cache);
 
         energy_released = burn_rate * frezon_cool_energy_released * energy_modifier;
     }
@@ -344,9 +344,9 @@ bool gas_mixture::react_nitrium_decomposition(float& heat_capacity_cache) {
     if (amount_of(nitrium) - efficiency < 0.f)
         return false;
 
-    adjust_amount_of(nitrium, -efficiency, heat_capacity_cache);
-    adjust_amount_of(water_vapour, efficiency, heat_capacity_cache);
-    adjust_amount_of(nitrogen, efficiency, heat_capacity_cache);
+    adjust_gas_cached_heat(nitrium, -efficiency, heat_capacity_cache);
+    adjust_gas_cached_heat(water_vapour, efficiency, heat_capacity_cache);
+    adjust_gas_cached_heat(nitrogen, efficiency, heat_capacity_cache);
 
     float energy_released = efficiency * nitrium_decomposition_energy;
     if (heat_capacity_cache > minimum_heat_capacity) {
