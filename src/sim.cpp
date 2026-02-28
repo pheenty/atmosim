@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "sim.hpp"
-#include "constants.hpp"
+#include "config.hpp"
 #include "gas.hpp"
 #include "utility.hpp"
 

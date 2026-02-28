@@ -5,7 +5,7 @@
 #include <argparse/args.hpp>
 #include <argparse/read.hpp>
 
-#include "constants.hpp"
+#include "config.hpp"
 #include "optimiser.hpp"
 #include "gas.hpp"
 #include "sim.hpp"
@@ -75,6 +75,8 @@ int main(int argc, char* argv[]) {
     enum struct work_mode {normal, mixing, full_input, tolerances};
     work_mode mode = work_mode::normal;
 
+    string config = "goob";
+
     bool mixing_mode = false, full_input_mode = false, tolerances_mode = false;
     bool simple_output = false, silent = false;
 
@@ -100,6 +102,7 @@ int main(int argc, char* argv[]) {
     size_t nthreads = 1;
 
     std::vector<std::shared_ptr<argp::base_argument>> args = {
+        argp::make_argument("config", "c", "set file path to server config, some are bundled in the program already", config),
         argp::make_argument("ratiob", "", "set gas ratio iteration bound", ratio_bound),
         argp::make_argument("ratiobounds", "rbs", "set gas ratio iteration bounds: exact setup", ratio_bounds),
         argp::make_argument("mixtoiter", "s", "provide potentially better results by also iterating the mix-to temperature (WARNING: will take many times longer to calculate)", step_target_temp),
@@ -162,6 +165,13 @@ int main(int argc, char* argv[]) {
         "\n"
         "  Brought to you by Ilya246 and friends"
     );
+
+    if (set_config(config)) {
+        cout << "Successfully loaded " << config << " config." << endl;
+    } else {
+        cout << "Error loading config" << endl;
+        exit(1);
+    };
 
     // check if we chose an alternate mode
     if (mixing_mode) mode = work_mode::mixing;

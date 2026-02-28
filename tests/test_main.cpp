@@ -6,7 +6,7 @@
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <argparse/args.hpp>
 
-#include "constants.hpp"
+#include "config.hpp"
 #include "gas.hpp"
 #include "tank.hpp"
 #include "optimiser.hpp"

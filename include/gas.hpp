@@ -6,7 +6,7 @@
 #include <argparse/read.hpp>
 
 // TODO: make this not required
-#include "constants.hpp"
+#include "config.hpp"
 
 namespace asim {
 

@@ -30,6 +30,6 @@ web:
 
 deploy: release win
 	@mkdir -p deploy
-	@tar -czf deploy/atmosim-linux-glibc-amd64.tar.gz configs -C out/release atmosim
-	@zip -r deploy/atmosim-windows-amd64.zip configs
+	@tar -czf deploy/atmosim-linux-glibc-amd64.tar.gz -C out/release atmosim # configs
+	# @zip -r deploy/atmosim-windows-amd64.zip configs
 	@zip -j deploy/atmosim-windows-amd64.zip out/win/atmosim.exe
