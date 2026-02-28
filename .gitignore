@@ -1,7 +1,7 @@
 deploy/
-out/
 .vscode/
 compile_commands.json
 *cache*
 *.kate-swp
 .aider*
+build

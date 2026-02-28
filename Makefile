@@ -8,28 +8,38 @@ endif
 .PHONY: debug test release win web deploy
 
 debug:
-	$(CMAKE) -B out/debug -DCMAKE_BUILD_TYPE=Debug .
-	@cmake --build out/debug --parallel
+	$(CMAKE) -B build -DCMAKE_BUILD_TYPE=Debug .
+	@cmake --build build --parallel
 
 test:
-	$(CMAKE) -B out/debug -DCMAKE_BUILD_TYPE=Test .
-	@cmake --build out/debug --parallel
-	@out/debug/tests
+	$(CMAKE) -B build -DCMAKE_BUILD_TYPE=Test .
+	@cmake --build build --parallel
+	@build/tests
+
+release-tui:
+	$(CMAKE) -B build -DCMAKE_BUILD_TYPE=Release .
+	@cmake --build build --parallel
 
 release:
-	$(CMAKE) -B out/release -DCMAKE_BUILD_TYPE=Release .
-	@cmake --build out/release --parallel
+	$(CMAKE) -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=ON .
+	@cmake --build build --parallel
 
-win:
-	cmake -B out/win -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32.cmake .
-	@cmake --build out/win --parallel
+win-tui:
+	cmake -B build/win -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32.cmake .
+	@cmake --build build/win --parallel
+
+# TODO: fix
+#win:
+#	cmake -B build/win -DCMAKE_BUILD_TYPE=Release -DBUILD_GUI=ON -DCMAKE_TOOLCHAIN_FILE=cmake/x86_64-w64-mingw32.cmake .
+#	@cmake --build build/win --parallel
 
 web:
-	@emcmake cmake -B out/web -S . -DCMAKE_BUILD_TYPE=Web
-	@cmake --build out/web
+	@emcmake cmake -B build/web -S . -DCMAKE_BUILD_TYPE=Web
+	@cmake --build build/web --parallel
 
-deploy: release win
+deploy: release win-tui
 	@mkdir -p deploy
-	@tar -czf deploy/atmosim-linux-glibc-amd64.tar.gz configs -C out/release atmosim
+	@tar -czf deploy/atmosim-linux-glibc-amd64.tar.gz configs -C build atmosim
+	@tar -czf deploy/atmosim-gui-linux-glibc-amd64.tar.gz configs -C build atmosim_gui
 	@zip -r deploy/atmosim-windows-amd64.zip configs
-	@zip -j deploy/atmosim-windows-amd64.zip out/win/atmosim.exe
+	@zip -j deploy/atmosim-windows-amd64.zip build/win/atmosim.exe
